@@ -1,0 +1,156 @@
+# PIPELINE DEFINITION
+# Name: dataloader-component
+# Inputs:
+#    batch_size: int
+#    gcs_bucket: str
+#    max_encoder_length: int [Default: 24.0]
+#    max_prediction_length: int [Default: 6.0]
+#    preprocessed_data_input: system.Dataset
+#    project: str
+#    special_days: list
+# Outputs:
+#    train_loader_output: system.Dataset
+#    training_output: system.Dataset
+#    val_loader_output: system.Dataset
+components:
+  comp-dataloader-component:
+    executorLabel: exec-dataloader-component
+    inputDefinitions:
+      artifacts:
+        preprocessed_data_input:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+      parameters:
+        batch_size:
+          parameterType: NUMBER_INTEGER
+        gcs_bucket:
+          parameterType: STRING
+        max_encoder_length:
+          defaultValue: 24.0
+          isOptional: true
+          parameterType: NUMBER_INTEGER
+        max_prediction_length:
+          defaultValue: 6.0
+          isOptional: true
+          parameterType: NUMBER_INTEGER
+        project:
+          parameterType: STRING
+        special_days:
+          parameterType: LIST
+    outputDefinitions:
+      artifacts:
+        train_loader_output:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+        training_output:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+        val_loader_output:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+deploymentSpec:
+  executors:
+    exec-dataloader-component:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - dataloader_component
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'pandas' 'numpy'\
+          \ 'pytorch_forecasting' 'torch' 'google-cloud-storage' && \"$0\" \"$@\"\n"
+        - python3
+        - -m
+        - kfp.dsl.executor_main
+        image: us-central1-docker.pkg.dev/ritheesh-1733201347/ngd/dataloader_component
+pipelineInfo:
+  name: dataloader-component
+root:
+  dag:
+    outputs:
+      artifacts:
+        train_loader_output:
+          artifactSelectors:
+          - outputArtifactKey: train_loader_output
+            producerSubtask: dataloader-component
+        training_output:
+          artifactSelectors:
+          - outputArtifactKey: training_output
+            producerSubtask: dataloader-component
+        val_loader_output:
+          artifactSelectors:
+          - outputArtifactKey: val_loader_output
+            producerSubtask: dataloader-component
+    tasks:
+      dataloader-component:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-dataloader-component
+        inputs:
+          artifacts:
+            preprocessed_data_input:
+              componentInputArtifact: preprocessed_data_input
+          parameters:
+            batch_size:
+              componentInputParameter: batch_size
+            gcs_bucket:
+              componentInputParameter: gcs_bucket
+            max_encoder_length:
+              componentInputParameter: max_encoder_length
+            max_prediction_length:
+              componentInputParameter: max_prediction_length
+            project:
+              componentInputParameter: project
+            special_days:
+              componentInputParameter: special_days
+        taskInfo:
+          name: dataloader-component
+  inputDefinitions:
+    artifacts:
+      preprocessed_data_input:
+        artifactType:
+          schemaTitle: system.Dataset
+          schemaVersion: 0.0.1
+    parameters:
+      batch_size:
+        parameterType: NUMBER_INTEGER
+      gcs_bucket:
+        parameterType: STRING
+      max_encoder_length:
+        defaultValue: 24.0
+        isOptional: true
+        parameterType: NUMBER_INTEGER
+      max_prediction_length:
+        defaultValue: 6.0
+        isOptional: true
+        parameterType: NUMBER_INTEGER
+      project:
+        parameterType: STRING
+      special_days:
+        parameterType: LIST
+  outputDefinitions:
+    artifacts:
+      train_loader_output:
+        artifactType:
+          schemaTitle: system.Dataset
+          schemaVersion: 0.0.1
+      training_output:
+        artifactType:
+          schemaTitle: system.Dataset
+          schemaVersion: 0.0.1
+      val_loader_output:
+        artifactType:
+          schemaTitle: system.Dataset
+          schemaVersion: 0.0.1
+schemaVersion: 2.1.0
+sdkVersion: kfp-2.10.1
